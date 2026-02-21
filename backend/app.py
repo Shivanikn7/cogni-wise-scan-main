@@ -121,9 +121,19 @@ def create_app():
     def health_api():
         try:
             db.session.execute(text("SELECT 1"))
-            return {"status": "ok", "database": "connected"}
+            return {"status": "ok", "database": "connected", "git": _get_git_revision()}
         except Exception as e:
-            return {"status": "error", "database": str(e)}, 500
+            return {"status": "error", "database": str(e), "git": _get_git_revision()}, 500
+
+    # debug endpoint to inspect source code on the server
+    @app.get("/debug/file")
+    def debug_file():
+        try:
+            lines = open(__file__, "r").read().splitlines()
+            # return first 50 lines so we can see imports
+            return {"lines": lines[:50]}
+        except Exception as e:
+            return {"error": str(e)}
 
     return app
 
