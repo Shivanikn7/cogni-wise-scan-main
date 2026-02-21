@@ -8,7 +8,11 @@ from sqlalchemy import inspect, text
 import json
 import os
 import io
+import sys
 from dotenv import load_dotenv, find_dotenv
+
+# Ensure sibling modules (level2_logic, knowledge_base) are importable on Vercel
+sys.path.insert(0, os.path.dirname(__file__))
 
 # Try to look up one level (root) for .env if not found in current dir
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
@@ -56,9 +60,6 @@ def create_app():
     if GEMINI_API_KEY:
         try:
             from google import genai
-            # Initialize client. Store it in app.config or a global for reuse if needed.
-            # Ideally use a global or factory pattern, but here we can just configure environment check.
-            # The new SDK uses a client instance.
             print("Gemini API key found. Client will be initialized in routes.")
         except Exception as e:
             print(f"Error importing google.genai: {e}")
@@ -136,6 +137,8 @@ class AssessmentResult(db.Model):
             "risk_level": self.risk_level,
             "risk_label": self.risk_label,
             "requires_level2": self.requires_level2,
+            "admin_notes": self.admin_notes,
+            "assessed_at": self.assessed_at.isoformat(),
         }
 
 
@@ -916,8 +919,9 @@ def register_routes(app: Flask, serializer: URLSafeTimedSerializer):
             return jsonify({"message": "Upload failed", "error": str(e)}), 500
 
 
+# Export app for Vercel Python runtime
+app = create_app()
 
 if __name__ == "__main__":
-    app = create_app()
     # Only for local development
     app.run(host="0.0.0.0", port=5000, debug=True)
