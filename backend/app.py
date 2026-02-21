@@ -25,14 +25,11 @@ else:
 # keep library imports light at module scope to avoid deployment failures
 from flask import send_file
 from werkzeug.utils import secure_filename
-try:
-    # How it runs locally
-    from level2_logic import generate_synthetic_data, calculate_level2_score
-    from knowledge_base import get_context
-except ImportError:
-    # How it runs on Vercel (from the root directory)
-    from backend.level2_logic import generate_synthetic_data, calculate_level2_score
-    from backend.knowledge_base import get_context
+
+# NOTE: imports for level2_logic and knowledge_base are intentionally delayed
+# until the functions that actually use them.  This avoids import-time errors
+# on platforms where those modules may not be on sys.path or installed.
+
 
 db = SQLAlchemy()
 
@@ -498,6 +495,12 @@ def register_routes(app: Flask, serializer: URLSafeTimedSerializer):
             if not user_id or not age_group:
                 return jsonify({"message": "Missing user_id or age_group"}), 400
 
+            # import scoring helpers here to avoid module import issues
+            try:
+                from backend.level2_logic import generate_synthetic_data, calculate_level2_score
+            except ImportError:
+                return jsonify({"message": "Server configuration error: level2 logic missing"}), 500
+
             metrics = {}
             if "game_scores" in data and data["game_scores"]:
                 # Use real game data normalized from frontend
@@ -808,7 +811,11 @@ def register_routes(app: Flask, serializer: URLSafeTimedSerializer):
 
             # 2. Build Context
             # Provide general knowledge base context
-            kb_context = get_context() 
+            try:
+                from backend.knowledge_base import get_context
+            except ImportError:
+                return jsonify({"message": "Server configuration error: knowledge base missing"}), 500
+            kb_context = get_context()
             
             # Construct Prompt
             system_instruction = f"""You are CogniWise AI, a helpful medical assistant for cognitive assessments.
