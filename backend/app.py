@@ -30,11 +30,13 @@ from pypdf import PdfReader
 from flask import send_file
 from werkzeug.utils import secure_filename
 try:
-    from .level2_logic import generate_synthetic_data, calculate_level2_score
-    from .knowledge_base import get_context
-except Exception:  # Fallback when running as a plain script (no package context)
+    # How it runs locally
     from level2_logic import generate_synthetic_data, calculate_level2_score
     from knowledge_base import get_context
+except ImportError:
+    # How it runs on Vercel (from the root directory)
+    from backend.level2_logic import generate_synthetic_data, calculate_level2_score
+    from backend.knowledge_base import get_context
 
 db = SQLAlchemy()
 
