@@ -33,9 +33,18 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
 
-    # Basic configuration – SQLite file will be created in the backend folder
-    db_path = os.path.join(os.path.dirname(__file__), "assessments.db")
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    # Database configuration with Vercel-safe defaults
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    else:
+        # Use /tmp for Vercel (read-only FS except /tmp), local file otherwise
+        if os.getenv("VERCEL") or os.getenv("VERCEL_ENV"):
+            db_path = "/tmp/assessments.db"
+        else:
+            db_path = os.path.join(os.path.dirname(__file__), "assessments.db")
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "cogniwise-secret-key")
     app.config["ADMIN_EMAIL"] = os.getenv("ADMIN_EMAIL", "admin@cogniwise.ai")
@@ -69,9 +78,18 @@ def create_app():
     register_routes(app, serializer)
 
     @app.get("/health")
-    def health():
+    def health_root():
         try:
             # Test DB connection
+            db.session.execute(text("SELECT 1"))
+            return {"status": "ok", "database": "connected"}
+        except Exception as e:
+            return {"status": "error", "database": str(e)}, 500
+
+    # Mirror health under /api for Vercel route matching
+    @app.get("/api/health")
+    def health_api():
+        try:
             db.session.execute(text("SELECT 1"))
             return {"status": "ok", "database": "connected"}
         except Exception as e:
@@ -118,8 +136,6 @@ class AssessmentResult(db.Model):
             "risk_level": self.risk_level,
             "risk_label": self.risk_label,
             "requires_level2": self.requires_level2,
-            "admin_notes": self.admin_notes,
-            "assessed_at": self.assessed_at.isoformat(),
         }
 
 
@@ -903,5 +919,5 @@ def register_routes(app: Flask, serializer: URLSafeTimedSerializer):
 
 if __name__ == "__main__":
     app = create_app()
-    # For local development
+    # Only for local development
     app.run(host="0.0.0.0", port=5000, debug=True)
