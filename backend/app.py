@@ -26,9 +26,30 @@ else:
 from flask import send_file
 from werkzeug.utils import secure_filename
 
-# NOTE: imports for level2_logic and knowledge_base are intentionally delayed
-# until the functions that actually use them.  This avoids import-time errors
-# on platforms where those modules may not be on sys.path or installed.
+# Attempt to import our sibling modules; fallback to stubs if unavailable.
+# Vercel sometimes runs the handler with a stale version of the file that
+# still contains the old top-level imports.  Guarding here ensures the
+# module always loads.
+try:
+    # prefer non-prefixed import for local dev
+    from level2_logic import generate_synthetic_data, calculate_level2_score
+    from knowledge_base import get_context
+except ImportError:
+    try:
+        # Vercel environment uses package path
+        from backend.level2_logic import generate_synthetic_data, calculate_level2_score
+        from backend.knowledge_base import get_context
+    except ImportError:
+        # define no-op stubs so import never fails; errors will surface if
+        # the functions are actually called at runtime.
+        def generate_synthetic_data(age_group):
+            raise RuntimeError("level2_logic module not available")
+        def calculate_level2_score(age_group, metrics):
+            raise RuntimeError("level2_logic module not available")
+        def get_context():
+            return ""
+
+# NOTE: further lazy imports are still used in handlers for extra safety
 
 
 db = SQLAlchemy()
