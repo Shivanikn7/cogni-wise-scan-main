@@ -22,11 +22,7 @@ else:
     load_dotenv()  # fallback to default behavior
 
 
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from pypdf import PdfReader
+# keep library imports light at module scope to avoid deployment failures
 from flask import send_file
 from werkzeug.utils import secure_filename
 try:
@@ -333,6 +329,16 @@ def calculate_risk(condition: str, features: dict) -> dict:
 
 
 def generate_pdf_report(data: dict, title: str) -> io.BytesIO:
+    # import reportlab inside function to avoid import errors when the library
+    # is not available in the environment (e.g. minimal Vercel lambda).
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    except ImportError as e:
+        raise RuntimeError("PDF generation library missing: %s" % e)
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
@@ -829,7 +835,10 @@ def register_routes(app: Flask, serializer: URLSafeTimedSerializer):
                 return jsonify({"message": "Server configuration error: Gemini API Key missing"}), 500
 
             # Use new google.genai SDK
-            from google import genai
+            try:
+                from google import genai
+            except ImportError:
+                return jsonify({"message": "AI service unavailable: genai library missing"}), 500
             client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
             
             # Prepare chat history for the new SDK
@@ -902,6 +911,11 @@ def register_routes(app: Flask, serializer: URLSafeTimedSerializer):
                 
             if file and user_id:
                 # Parse PDF
+                try:
+                    from pypdf import PdfReader
+                except ImportError:
+                    return jsonify({"message": "Server configuration error: PDF parser not available"}), 500
+
                 pdf_reader = PdfReader(file)
                 text_content = ""
                 for page in pdf_reader.pages:
