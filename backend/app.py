@@ -98,14 +98,23 @@ def create_app():
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     register_routes(app, serializer)
 
+    def _get_git_revision():
+        # Helper returns the current commit hash if the .git directory is available.
+        try:
+            import subprocess
+            rev = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=os.path.dirname(__file__))
+            return rev.decode().strip()
+        except Exception:
+            return "unknown"
+
     @app.get("/health")
     def health_root():
         try:
             # Test DB connection
             db.session.execute(text("SELECT 1"))
-            return {"status": "ok", "database": "connected"}
+            return {"status": "ok", "database": "connected", "git": _get_git_revision()}
         except Exception as e:
-            return {"status": "error", "database": str(e)}, 500
+            return {"status": "error", "database": str(e), "git": _get_git_revision()}, 500
 
     # Mirror health under /api for Vercel route matching
     @app.get("/api/health")
