@@ -1,8 +1,4 @@
-const envBase = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
 const isDev = import.meta.env.DEV
-
-// In production, default to same-origin ('') so requests go to /api/... on the same host.
-// In development, default to the Flask server on localhost:5000 unless VITE_API_URL is set.
 const baseUrl = envBase && envBase.length > 0
   ? envBase.replace(/\/$/, "")
   : (isDev ? "http://localhost:5000" : "")
