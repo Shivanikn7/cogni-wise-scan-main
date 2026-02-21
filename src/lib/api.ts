@@ -1,20 +1,15 @@
-const isDev = import.meta.env.DEV
-const getBaseUrl = () => {
-  const envUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
-  const isDev = import.meta.env.DEV;
+// src/lib/api.ts
 
-  if (envUrl && envUrl.length > 0) {
-    return envUrl.replace(/\/$/, "");
-  }
-  
-  // In production, always default to empty string for relative paths
-  return isDev ? "http://localhost:5000" : "";
-};
+// Check if we are running locally on our computer
+const isDev = import.meta.env.DEV;
 
-export const API_BASE_URL: string = getBaseUrl();
+// FORCE LOGIC: 
+// If on Vercel (Production), ALWAYS use "" (relative paths).
+// If on local computer (Development), ALWAYS use "http://localhost:5000".
+// This completely ignores any stubborn .env files or Vercel variables.
+export const API_BASE_URL: string = isDev ? "http://localhost:5000" : "";
 
 export const buildApiUrl = (path: string): string => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  // Use relative paths if API_BASE_URL is empty
-  return API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;
+  return `${API_BASE_URL}${normalizedPath}`;
 };
