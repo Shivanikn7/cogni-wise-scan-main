@@ -1,0 +1,10 @@
+# Exclude local artifacts and caches from deployment
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyc
+backend/assessments.db
+*.sqlite
+*.db
+node_modules/
+dist/

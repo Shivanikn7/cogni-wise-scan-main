@@ -29,8 +29,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from pypdf import PdfReader
 from flask import send_file
 from werkzeug.utils import secure_filename
-from level2_logic import generate_synthetic_data, calculate_level2_score
-from knowledge_base import get_context
+try:
+    from .level2_logic import generate_synthetic_data, calculate_level2_score
+    from .knowledge_base import get_context
+except Exception:  # Fallback when running as a plain script (no package context)
+    from level2_logic import generate_synthetic_data, calculate_level2_score
+    from knowledge_base import get_context
 
 db = SQLAlchemy()
 

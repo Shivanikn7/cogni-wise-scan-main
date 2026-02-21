@@ -24,3 +24,14 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Python cache and build artifacts
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyc
+
+# Local SQLite databases (do not deploy or commit)
+backend/assessments.db
+*.sqlite
+*.db
